@@ -18,15 +18,17 @@ import (
 
 func main() {
 
+	// Parse commandline parameters
 	var n int
 	var peers string
 	flag.IntVar(&n, "n", 1, "number of requests")
 	flag.StringVar(&peers, "peers", "", "comma delimited teoapi peers")
 	flag.Parse()
+	//
 	teonet.CheckRequeredParams("peers")
-
 	addrs := strings.Split(peers, ",")
 
+	// Set log time
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.Println("start")
 	start := time.Now()
