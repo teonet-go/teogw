@@ -26,18 +26,9 @@ func newTru(teo *teonet.Teonet) (t *Tru, err error) {
 	t.teo = teo
 	t.log = teo.Log()
 
-	// // Create server connection and start listen incominng packets
-	// t.Tru, err = tru.New(params.tru_port, t.reader, tru.Stat(params.tru_stat),
-	// 	/* tru.Hotkey(*hotkey), */ log, params.loglevel,
-	// 	teolog.Logfilter(params.logfilter))
-	// if err != nil {
-	// 	return
-	// }
-	//
-
-	t.Teogw, err = teogw.New(params.tru_port, t.log, t.reader, tru.Stat(params.tru_stat),
-		/* tru.Hotkey(*hotkey), */ t.log, params.loglevel,
-		teolog.Logfilter(params.logfilter))
+	t.Teogw, err = teogw.New(params.tru_port, t.log, t.reader,
+		tru.Stat(params.tru_stat), /* tru.Hotkey(*hotkey), */
+		t.log, params.loglevel, teolog.Logfilter(params.logfilter))
 
 	return
 }
@@ -49,9 +40,8 @@ func (t *Tru) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed boo
 		// t.log.Debug.Println("got error in main reader:", err)
 		return
 	}
-	// t.log.Debugv.Printf("got %d byte from %s, id %d, data len: %d\n",
-	// 	pac.Len(), ch.Addr().String(), pac.ID(), len(pac.Data()))
 
+	// Unmarshal packet
 	var gw teogw.TeogwData
 	err = gw.UnmarshalBinary(pac.Data())
 	if err != nil {
@@ -61,6 +51,8 @@ func (t *Tru) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed boo
 	t.log.Debugv.Println("got teogw request", gw.Address(), gw.Command())
 	gw.SetID(uint32(pac.ID()))
 
+	// Connect to teonet peer, send request, get answer and resend answer to 
+	// tru sender
 	go func(ch *tru.Channel, gw teogw.TeogwData) {
 
 		var err error
@@ -89,11 +81,15 @@ func (t *Tru) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed boo
 			t.log.Debug.Println("can't send api command, err:", err)
 			return
 		}
+		t.log.Debug.Printf("send to %s cmd %s\n", gw.Address(), gw.Command())
 		data, err := api.WaitFrom(gw.Command(), uint32(id))
 		if err != nil {
 			t.log.Debug.Println("can't get api data, err", err)
 			return
 		}
+		t.log.Debug.Printf("got from %s cmd %s, data len: %d\n", gw.Address(),
+			gw.Command(), len(data))
+
 		gw.SetData(data)
 
 	}(ch, gw)
@@ -101,6 +97,7 @@ func (t *Tru) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed boo
 	return
 }
 
+// Send answer to Tru sender
 func (t *Tru) sendAnswer(ch *tru.Channel, gw *teogw.TeogwData) (err error) {
 	data, err := gw.MarshalBinary()
 	if err != nil {
