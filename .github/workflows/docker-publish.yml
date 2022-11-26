@@ -1,0 +1,55 @@
+name: Docker build and Publish Image CI
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags: 
+      - v*.*.*
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+    env:
+      NAME: teogw
+      ORG: teonet-go
+      USER: ${{ secrets.USER }}
+      PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+      PACKAGES_TOKEN: ${{ secrets.PACKAGES_TOKEN }}
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Branch name
+      id: branch_name
+      run: |
+        echo ::set-output name=SOURCE_NAME::${GITHUB_REF#refs/*/}
+        echo ::set-output name=SOURCE_BRANCH::${GITHUB_REF#refs/heads/}
+        echo ::set-output name=SOURCE_TAG::${GITHUB_REF#refs/tags/}
+
+    - name: Set name, branch and tag to environment
+      env:
+        SOURCE_NAME: ${{ steps.branch_name.outputs.SOURCE_NAME }}
+        SOURCE_BRANCH: ${{ steps.branch_name.outputs.SOURCE_BRANCH }}
+        SOURCE_TAG: ${{ steps.branch_name.outputs.SOURCE_TAG }}
+      run: |
+        echo $SOURCE_NAME
+        echo $SOURCE_BRANCH
+        echo $SOURCE_TAG
+
+    - name: Build the Docker image
+      env:
+          VERSION: ${{ steps.branch_name.outputs.SOURCE_TAG }}
+      run: docker build --build-arg github_user="$USER" --build-arg github_personal_token="$PERSONAL_TOKEN" --build-arg version="$VERSION"  -t $NAME -f ./.github/Dockerfile .
+
+    - name: Publish Docker image to Github Packages
+      env:
+        VERSION: ${{ steps.branch_name.outputs.SOURCE_TAG }}
+      run: |
+          docker login ghcr.io -u $USER -p $PACKAGES_TOKEN
+          echo ""
+          docker tag $NAME ghcr.io/$ORG/$NAME:${VERSION:1}
+          docker push ghcr.io/$ORG/$NAME:${VERSION:1}
+          echo ""
+          docker tag $NAME ghcr.io/$ORG/$NAME:latest
+          docker push ghcr.io/$ORG/$NAME:latest

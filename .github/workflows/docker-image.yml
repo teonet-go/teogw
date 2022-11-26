@@ -1,0 +1,21 @@
+name: Docker build Image CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NAME: teogw
+    steps:
+      - uses: actions/checkout@v2
+      - name: Build the Docker image
+        env:
+          USER: ${{ secrets.USER }}
+          PERSONAL_TOKEN: ${{ secrets.PERSONAL_TOKEN }}
+          VERSION: 0.6.0
+        run: docker build --build-arg github_user="$USER" --build-arg github_personal_token="$PERSONAL_TOKEN" --build-arg version="$VERSION" -t $NAME -f ./.github/Dockerfile .
