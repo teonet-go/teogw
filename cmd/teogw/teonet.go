@@ -13,11 +13,17 @@ import (
 	"github.com/teonet-go/teonet"
 )
 
-// Connect and start Teonet
-func Teonet() (teo *teonet.Teonet, err error) {
+// Teonet data structure and Methods receiver
+type Teonet struct {
+	*teonet.Teonet
+}
+
+// Connect and start newTeonet
+func newTeonet() (teo *Teonet, err error) {
 
 	// Create Teonet connector
-	teo, err = teonet.New(
+	teo = new(Teonet)
+	teo.Teonet, err = teonet.New(
 		params.appShortName, params.port, teonet.Stat(params.stat), teonet.Hotkey(params.hotkey),
 		params.loglevel, teonet.Logfilter(params.logfilter),
 	)
@@ -45,6 +51,35 @@ func Teonet() (teo *teonet.Teonet, err error) {
 		})
 		fmt.Println("connected to monitor")
 	}
+
+	return
+}
+
+func (teo *Teonet) proxyCall(address, command string, data []byte) (dataout []byte, err error) {
+	// Send api request to teonet peer
+	err = teo.ConnectTo(address)
+	if err != nil {
+		teo.Log().Debug.Println("can't connect teonet peer, err:", err)
+		return
+	}
+	api, err := teo.NewAPIClient(address)
+	if err != nil {
+		teo.Log().Debug.Println("can't connect to api, err:", err)
+		return
+	}
+	id, err := api.SendTo(command, data)
+	if err != nil {
+		teo.Log().Debug.Println("can't send api command, err:", err)
+		return
+	}
+	teo.Log().Debug.Printf("send to %s cmd %s\n", address, command)
+	dataout, err = api.WaitFrom(command, uint32(id))
+	if err != nil {
+		teo.Log().Debug.Println("can't get api data, err", err)
+		return
+	}
+	teo.Log().Debug.Printf("got from %s cmd %s, data len: %d\n", address,
+		command, len(dataout))
 
 	return
 }
