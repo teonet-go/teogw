@@ -47,7 +47,7 @@ func (t *Tru) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed boo
 		t.log.Debug.Println("got wrong packet")
 		return
 	}
-	t.log.Debugv.Println("got teogw request", gw.Address(), gw.Command())
+	t.log.Debugv.Println("got teogw request", gw.Address, gw.Command)
 	gw.SetID(uint32(pac.ID()))
 
 	// Connect to teonet peer, send request, get answer and resend answer to
@@ -64,32 +64,8 @@ func (t *Tru) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed boo
 			t.sendAnswer(ch, gw)
 		}()
 
-		// // Send api request to teonet peer
-		// err = t.teo.ConnectTo(gw.Address())
-		// if err != nil {
-		// 	t.log.Debug.Println("can't connect teonet peer, err:", err)
-		// 	return
-		// }
-		// api, err := t.teo.NewAPIClient(gw.Address())
-		// if err != nil {
-		// 	t.log.Debug.Println("can't connect to api, err:", err)
-		// 	return
-		// }
-		// id, err := api.SendTo(gw.Command(), gw.Data())
-		// if err != nil {
-		// 	t.log.Debug.Println("can't send api command, err:", err)
-		// 	return
-		// }
-		// t.log.Debug.Printf("send to %s cmd %s\n", gw.Address(), gw.Command())
-		// data, err := api.WaitFrom(gw.Command(), uint32(id))
-		// if err != nil {
-		// 	t.log.Debug.Println("can't get api data, err", err)
-		// 	return
-		// }
-		// t.log.Debug.Printf("got from %s cmd %s, data len: %d\n", gw.Address(),
-		// 	gw.Command(), len(data))
-
-		data, err := t.teo.proxyCall(gw.Address(), gw.Command(), gw.Data())
+		// Send api request to teonet peer
+		data, err := t.teo.proxyCall(gw.Address, gw.Command, gw.Data)
 		if err != nil {
 			return
 		}

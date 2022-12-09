@@ -107,18 +107,18 @@ func (t *Teogw) reader(ch *tru.Channel, pac *tru.Packet, err error) (processed b
 		return
 	}
 
-	c, exists := t.subs.get(gwdata.address, gwdata.id)
+	c, exists := t.subs.get(gwdata.Address, gwdata.ID)
 	if !exists {
-		fmt.Println("wait subscription does not exists:", gwdata.address, gwdata.id)
+		fmt.Println("wait subscription does not exists:", gwdata.Address, gwdata.ID)
 		return
 	}
 
-	if len(gwdata.err) > 0 {
-		err = errors.New(gwdata.err)
+	if len(gwdata.Err) > 0 {
+		err = errors.New(gwdata.Err)
 	} else {
 		err = nil
 	}
-	c <- channelData{gwdata.data, err}
+	c <- channelData{gwdata.Data, err}
 
 	return
 }

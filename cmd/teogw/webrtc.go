@@ -7,9 +7,11 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
+	"github.com/teonet-go/teogw"
 	"github.com/teonet-go/teowebrtc_client"
 	"github.com/teonet-go/teowebrtc_server"
 	"github.com/teonet-go/teowebrtc_signal"
@@ -26,7 +28,35 @@ func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 	time.Sleep(1 * time.Millisecond) // Wait while ws server start
 
 	const name = "server-1"
-	// const url = "localhost:8081"
+
+	// Connect to teonet peer, send request, get answer and resend answer to
+	// tru sender
+	proxyRequest := func(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData) {
+
+		var err error
+
+		// Send answer before return
+		defer func() {
+			if err != nil {
+				gw.SetError(err)
+			}
+			data, err := json.Marshal(gw)
+			if err != nil {
+				// TODO: send this error to dc
+				return
+			}
+			dc.Send(data)
+		}()
+
+		// Send api request to teonet peer
+		data, err := teo.proxyCall(gw.Address, gw.Command, gw.Data)
+		if err != nil {
+			return
+		}
+
+		gw.SetData(data)
+	}
+
 	connected := func(peer string, dc *teowebrtc_client.DataChannel) {
 		log.Println("connected to", peer)
 
@@ -37,6 +67,16 @@ func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 		// Register text message handling
 		dc.OnMessage(func(data []byte) {
 			log.Printf("got Message from peer '%s': '%s'\n", peer, string(data))
+
+			// Unmarshal proxy command
+			var request teogw.TeogwData
+			err := json.Unmarshal(data, &request)
+			log.Println("got Message from peer, request:", request, err)
+			if err == nil && len(request.Address) > 0 && len(request.Command) > 0 {
+				go proxyRequest(dc, &request)
+				return
+			}
+
 			// Send echo answer
 			d := []byte("Answer to: ")
 			data = append(d, data...)

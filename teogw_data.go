@@ -15,42 +15,42 @@ import (
 
 // Teogw packet data
 type TeogwData struct {
-	id      uint32
-	address string
-	command string
-	data    []byte
-	err     string
+	ID      uint32 `json:"id"`
+	Address string `json:"address"`
+	Command string `json:"command"`
+	Data    []byte `json:"data"`
+	Err     string `json:"err"`
 }
 
 // Set id
 func (gw *TeogwData) SetID(id uint32) {
-	gw.id = id
+	gw.ID = id
 }
 
 // Set data
 func (gw *TeogwData) SetData(data []byte) {
-	gw.data = data
+	gw.Data = data
 }
 
 // Set error
 func (gw *TeogwData) SetError(err error) {
-	gw.err = err.Error()
+	gw.Err = err.Error()
 }
 
 // Get address
-func (gw *TeogwData) Address() string {
-	return gw.address
-}
+// func (gw *TeogwData) GetAddress() string {
+// 	return gw.Address
+// }
 
-// Get command
-func (gw *TeogwData) Command() string {
-	return gw.command
-}
+// // Get command
+// func (gw *TeogwData) GetCommand() string {
+// 	return gw.Command
+// }
 
-// Get data
-func (gw *TeogwData) Data() []byte {
-	return gw.data
-}
+// // Get data
+// func (gw *TeogwData) GetData() []byte {
+// 	return gw.Data
+// }
 
 // MarshalBinary marshal Teogw binary packet
 func (gw *TeogwData) MarshalBinary() (out []byte, err error) {
@@ -60,11 +60,11 @@ func (gw *TeogwData) MarshalBinary() (out []byte, err error) {
 	le := binary.LittleEndian
 
 	// b.WriteSlice(buf, []byte(gw.id))
-	binary.Write(buf, le, gw.id)
-	b.WriteSlice(buf, []byte(gw.address))
-	b.WriteSlice(buf, []byte(gw.command))
-	b.WriteSlice(buf, []byte(gw.data))
-	b.WriteSlice(buf, []byte(gw.err))
+	binary.Write(buf, le, gw.ID)
+	b.WriteSlice(buf, []byte(gw.Address))
+	b.WriteSlice(buf, []byte(gw.Command))
+	b.WriteSlice(buf, []byte(gw.Data))
+	b.WriteSlice(buf, []byte(gw.Err))
 
 	out = buf.Bytes()
 	return
@@ -78,27 +78,27 @@ func (gw *TeogwData) UnmarshalBinary(data []byte) (err error) {
 	le := binary.LittleEndian
 
 	// gw.id, err = b.ReadString(buf)
-	binary.Read(buf, le, &gw.id)
+	binary.Read(buf, le, &gw.ID)
 	if err != nil {
 		return
 	}
 
-	gw.address, err = b.ReadString(buf)
+	gw.Address, err = b.ReadString(buf)
 	if err != nil {
 		return
 	}
 
-	gw.command, err = b.ReadString(buf)
+	gw.Command, err = b.ReadString(buf)
 	if err != nil {
 		return
 	}
 
-	gw.data, err = b.ReadSlice(buf)
+	gw.Data, err = b.ReadSlice(buf)
 	if err != nil {
 		return
 	}
 
-	gw.err, err = b.ReadString(buf)
+	gw.Err, err = b.ReadString(buf)
 
 	return
 }
