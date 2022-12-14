@@ -55,6 +55,7 @@ func newTeonet() (teo *Teonet, err error) {
 	return
 }
 
+// proxyCall send api request to teonet peer, wait and return answer
 func (teo *Teonet) proxyCall(address, command string, data []byte) (dataout []byte, err error) {
 	// Send api request to teonet peer
 	err = teo.ConnectTo(address)
