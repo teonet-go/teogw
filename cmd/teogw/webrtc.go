@@ -31,8 +31,8 @@ func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 
 	// Create WebRTC object
 	w = new(WebRTC)
-	w.peersMap = make(peersMap)
-	w.RWMutex = new(sync.RWMutex)
+	w.peers.init()
+	w.subscribe.init()
 	w.Teonet = teo
 
 	// Start and process signal server
@@ -182,6 +182,12 @@ type peerData struct {
 	dc   *teowebrtc_client.DataChannel
 }
 
+// Init peers object
+func (p *peers) init() {
+	p.peersMap = make(peersMap)
+	p.RWMutex = new(sync.RWMutex)
+}
+
 // Add peer to peers map
 func (p *peers) add(peer string, dc *teowebrtc_client.DataChannel) {
 	p.Lock()
@@ -241,15 +247,37 @@ func (p *peers) onchange(f func()) {
 
 // Executes when peers map changed
 func (p *peers) changed() {
-	for _, f := range p.subscribe.subscribe {
+	for _, f := range p.subscribe.subscribeMap {
 		f()
 	}
 }
 
+// Subscribe data structure and method receiver
 type subscribe struct {
-	subscribe []func()
+	subscribeID int
+	subscribeMap
+	*sync.RWMutex
+}
+type subscribeMap map[int]func()
+
+// Init subscribe object
+func (s *subscribe) init() {
+	s.subscribeMap = make(subscribeMap)
+	s.RWMutex = new(sync.RWMutex)
 }
 
-func (s *subscribe) add(f func()) {
-	s.subscribe = append(s.subscribe, f)
+// Add function to subscribe and return subscribe ID
+func (s *subscribe) add(f func()) int {
+	s.Lock()
+	defer s.Unlock()
+	s.subscribeID++
+	s.subscribeMap[s.subscribeID] = f
+	return s.subscribeID
+}
+
+// Delete from subscribe by ID
+func (s *subscribe) del(id int) {
+	s.Lock()
+	defer s.Unlock()
+	delete(s.subscribeMap, id)
 }
