@@ -80,7 +80,7 @@ func (w *WebRTC) connected(peer string, dc *teowebrtc_client.DataChannel) {
 		// Execute request to this server
 		case err == nil && len(request.Address) == 0 && len(request.Command) > 0:
 			log.Println("got server request:", request)
-			go w.serverRequest(dc, &request)
+			go w.serverRequest(peer, dc, &request)
 
 		// Send echo answer
 		default:
@@ -110,7 +110,8 @@ func (w *WebRTC) proxyRequest(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwD
 }
 
 // Process this server request
-func (w *WebRTC) serverRequest(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData) {
+func (w *WebRTC) serverRequest(peer string, dc *teowebrtc_client.DataChannel,
+	gw *teogw.TeogwData) {
 
 	var err error
 	var data []byte
@@ -128,7 +129,7 @@ func (w *WebRTC) serverRequest(dc *teowebrtc_client.DataChannel, gw *teogw.Teogw
 
 	// Subscribe to event
 	case "subscribe":
-		w.subscribeRequest(dc, gw)
+		w.subscribeRequest(peer, dc, gw)
 		data = []byte("done")
 
 	// Wrong request
@@ -141,12 +142,14 @@ func (w *WebRTC) serverRequest(dc *teowebrtc_client.DataChannel, gw *teogw.Teogw
 }
 
 // Process this server subscribe request
-func (w *WebRTC) subscribeRequest(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData) {
+func (w *WebRTC) subscribeRequest(peer string, dc *teowebrtc_client.DataChannel,
+	gw *teogw.TeogwData) {
+
 	request := string(gw.Data)
 	log.Println("got subscribe request:", request)
 	switch request {
 	case "clients":
-		w.onchange(func() {
+		w.onchange(peer, func() {
 			l := w.len()
 			data := []byte(fmt.Sprintf("%d", l))
 			gw.Command = "clients"
@@ -157,7 +160,9 @@ func (w *WebRTC) subscribeRequest(dc *teowebrtc_client.DataChannel, gw *teogw.Te
 }
 
 // Send answer to data channel
-func (w *WebRTC) answer(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData, inerr error) (err error) {
+func (w *WebRTC) answer(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData,
+	inerr error) (err error) {
+
 	if inerr != nil {
 		gw.SetError(inerr)
 	}
@@ -200,6 +205,8 @@ func (p *peers) del(peer string) {
 	p.Lock()
 	defer func() { p.Unlock(); p.changed() }()
 	delete(p.peersMap, peer)
+	log.Println("remove " + peer + " from subscribers")
+	go p.subscribe.del(peer)
 }
 
 // Get peers dc from map
@@ -240,15 +247,15 @@ func (p *peers) list() (l []peerData) {
 }
 
 // Subscribe to change number in peer map
-func (p *peers) onchange(f func()) {
-	log.Println("subscribed to clients")
-	p.subscribe.add(f)
+func (p *peers) onchange(peer string, f func()) {
+	log.Println(peer + " subscribed to clients")
+	p.subscribe.add(peer, f)
 }
 
 // Executes when peers map changed
 func (p *peers) changed() {
-	for _, f := range p.subscribe.subscribeMap {
-		f()
+	for _, sd := range p.subscribe.subscribeMap {
+		sd.f()
 	}
 }
 
@@ -258,7 +265,11 @@ type subscribe struct {
 	subscribeMap
 	*sync.RWMutex
 }
-type subscribeMap map[int]func()
+type subscribeMap map[int]subscribeData
+type subscribeData struct {
+	peer string
+	f    func()
+}
 
 // Init subscribe object
 func (s *subscribe) init() {
@@ -267,17 +278,26 @@ func (s *subscribe) init() {
 }
 
 // Add function to subscribe and return subscribe ID
-func (s *subscribe) add(f func()) int {
+func (s *subscribe) add(peer string, f func()) int {
 	s.Lock()
 	defer s.Unlock()
 	s.subscribeID++
-	s.subscribeMap[s.subscribeID] = f
+	s.subscribeMap[s.subscribeID] = subscribeData{peer, f}
 	return s.subscribeID
 }
 
-// Delete from subscribe by ID
-func (s *subscribe) del(id int) {
+// Delete from subscribe by ID or Peer name
+func (s *subscribe) del(id interface{}) {
 	s.Lock()
 	defer s.Unlock()
-	delete(s.subscribeMap, id)
+	switch v := id.(type) {
+	case int:
+		delete(s.subscribeMap, v)
+	case string:
+		for id, md := range s.subscribeMap {
+			if md.peer == v {
+				delete(s.subscribeMap, id)
+			}
+		}
+	}
 }
