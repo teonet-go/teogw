@@ -3,6 +3,7 @@ module github.com/teonet-go/teogw
 go 1.19
 
 // replace github.com/teonet-go/teowebrtc_server => ../teowebrtc_server
+replace github.com/teonet-go/teowebrtc_client => ../teowebrtc_client
 
 require (
 	github.com/kirill-scherba/bslice v0.0.2

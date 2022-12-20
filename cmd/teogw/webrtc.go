@@ -61,7 +61,7 @@ func (w *WebRTC) connected(peer string, dc *teowebrtc_client.DataChannel) {
 
 	dc.OnClose(func() {
 		log.Println("data channel closed", peer)
-		w.del(peer)
+		w.del(peer, dc)
 	})
 
 	// Register text message handling
@@ -149,10 +149,10 @@ func (w *WebRTC) subscribeRequest(peer string, dc *teowebrtc_client.DataChannel,
 	log.Println("got subscribe request:", request)
 	switch request {
 	case "clients":
-		w.onchange(peer, func() {
+		w.onchange(peer, dc, func() {
 			l := w.len()
 			data := []byte(fmt.Sprintf("%d", l))
-			gw.Command = "clients"
+			gw.Command = request
 			gw.SetData(data)
 			w.answer(dc, gw, nil)
 		})
@@ -197,22 +197,35 @@ func (p *peers) init() {
 func (p *peers) add(peer string, dc *teowebrtc_client.DataChannel) {
 	p.Lock()
 	defer func() { p.Unlock(); p.changed() }()
+
+	// Close data channel to existing connection from this peer
+	if dcCurrent, exists := p.getUnsafe(peer); exists && dcCurrent != dc {
+		log.Println("close existing data channel with peer " + peer)
+		p.delUnsafe(peer, dcCurrent)
+		dcCurrent.Close()
+	}
+
 	p.peersMap[peer] = dc
 }
 
 // Delete peer from peers map
-func (p *peers) del(peer string) {
+func (p *peers) del(peer string, dc *teowebrtc_client.DataChannel) {
 	p.Lock()
 	defer func() { p.Unlock(); p.changed() }()
+
+	dcCurrent, exists := p.getUnsafe(peer)
+	if exists && dcCurrent == dc {
+		log.Println("remove peer " + peer)
+		p.delUnsafe(peer, dc)
+	}
+}
+func (p *peers) delUnsafe(peer string, dc *teowebrtc_client.DataChannel) {
 	delete(p.peersMap, peer)
-	log.Println("remove " + peer + " from subscribers")
-	go p.subscribe.del(peer)
+	go p.subscribe.del(peer, dc)
 }
 
 // Get peers dc from map
-func (p *peers) get(name string) (dc *teowebrtc_client.DataChannel, exists bool) {
-	p.RLock()
-	defer p.RUnlock()
+func (p *peers) getUnsafe(name string) (dc *teowebrtc_client.DataChannel, exists bool) {
 	dc, exists = p.peersMap[name]
 	return
 }
@@ -247,9 +260,9 @@ func (p *peers) list() (l []peerData) {
 }
 
 // Subscribe to change number in peer map
-func (p *peers) onchange(peer string, f func()) {
+func (p *peers) onchange(peer string, dc *teowebrtc_client.DataChannel, f func()) {
 	log.Println(peer + " subscribed to clients")
-	p.subscribe.add(peer, f)
+	p.subscribe.add(peer, dc, f)
 }
 
 // Executes when peers map changed
@@ -268,6 +281,7 @@ type subscribe struct {
 type subscribeMap map[int]subscribeData
 type subscribeData struct {
 	peer string
+	dc   *teowebrtc_client.DataChannel
 	f    func()
 }
 
@@ -278,16 +292,16 @@ func (s *subscribe) init() {
 }
 
 // Add function to subscribe and return subscribe ID
-func (s *subscribe) add(peer string, f func()) int {
+func (s *subscribe) add(peer string, dc *teowebrtc_client.DataChannel, f func()) int {
 	s.Lock()
 	defer s.Unlock()
 	s.subscribeID++
-	s.subscribeMap[s.subscribeID] = subscribeData{peer, f}
+	s.subscribeMap[s.subscribeID] = subscribeData{peer, dc, f}
 	return s.subscribeID
 }
 
 // Delete from subscribe by ID or Peer name
-func (s *subscribe) del(id interface{}) {
+func (s *subscribe) del(id interface{}, dc ...*teowebrtc_client.DataChannel) {
 	s.Lock()
 	defer s.Unlock()
 	switch v := id.(type) {
@@ -295,7 +309,7 @@ func (s *subscribe) del(id interface{}) {
 		delete(s.subscribeMap, v)
 	case string:
 		for id, md := range s.subscribeMap {
-			if md.peer == v {
+			if md.peer == v && len(dc) > 0 && md.dc == dc[0] {
 				delete(s.subscribeMap, id)
 			}
 		}
