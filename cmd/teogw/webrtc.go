@@ -20,6 +20,12 @@ import (
 	"github.com/teonet-go/teowebrtc_signal"
 )
 
+const (
+	cmdSubscribe = "subscribe"
+	cmdClients   = "clients"
+	cmdList      = "list"
+)
+
 // WebRTC data and methods receiver
 type WebRTC struct {
 	peers
@@ -123,12 +129,16 @@ func (w *WebRTC) serverRequest(peer string, dc *teowebrtc_client.DataChannel,
 	switch gw.Command {
 
 	// Get number of clients
-	case "clients":
+	case cmdClients:
 		l := w.len()
 		data = []byte(fmt.Sprintf("%d", l))
 
+	// Get list of clients
+	case cmdList:
+		data, err = w.getList()
+
 	// Subscribe to event
-	case "subscribe":
+	case cmdSubscribe:
 		w.subscribeRequest(peer, dc, gw)
 		data = []byte("done")
 
@@ -141,6 +151,16 @@ func (w *WebRTC) serverRequest(peer string, dc *teowebrtc_client.DataChannel,
 	}
 }
 
+// getList return json encoded list of clients
+func (w *WebRTC) getList() ([]byte, error) {
+	type List []string
+	var list List
+	for p := range w.listCh() {
+		list = append(list, p.name)
+	}
+	return json.Marshal(list)
+}
+
 // Process this server subscribe request
 func (w *WebRTC) subscribeRequest(peer string, dc *teowebrtc_client.DataChannel,
 	gw *teogw.TeogwData) {
@@ -148,13 +168,20 @@ func (w *WebRTC) subscribeRequest(peer string, dc *teowebrtc_client.DataChannel,
 	request := string(gw.Data)
 	log.Println("got subscribe request:", request)
 	switch request {
-	case "clients":
+	case cmdClients:
 		w.onchange(peer, dc, func() {
 			l := w.len()
 			data := []byte(fmt.Sprintf("%d", l))
 			gw.Command = request
 			gw.SetData(data)
 			w.answer(dc, gw, nil)
+		})
+	case cmdList:
+		w.onchange(peer, dc, func() {
+			data, err := w.getList()
+			gw.Command = request
+			gw.SetData(data)
+			w.answer(dc, gw, err)
 		})
 	}
 }
