@@ -20,6 +20,7 @@ import (
 	"github.com/teonet-go/teowebrtc_signal"
 )
 
+// This WebRTC server commands
 const (
 	cmdSubscribe = "subscribe"
 	cmdClients   = "clients"
