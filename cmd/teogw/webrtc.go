@@ -7,339 +7,224 @@
 package main
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"log"
-	"sync"
-	"time"
-
 	"github.com/teonet-go/teogw"
-	"github.com/teonet-go/teowebrtc_client"
 	"github.com/teonet-go/teowebrtc_server"
-	"github.com/teonet-go/teowebrtc_signal"
-)
-
-// This WebRTC server commands
-const (
-	cmdSubscribe = "subscribe"
-	cmdClients   = "clients"
-	cmdList      = "list"
 )
 
 // WebRTC data and methods receiver
 type WebRTC struct {
-	peers
+	*teowebrtc_server.WebRTC
 	*Teonet
 }
 
 // Connect and start WebRTC proxy
 func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 
+	const name = "server-1"
+
 	// Create WebRTC object
 	w = new(WebRTC)
-	w.peers.init()
-	w.subscribe.init()
+	w.WebRTC, err = teowebrtc_server.New(
+		params.signalAddr,
+		params.signalAddrTls,
+		name,
+		new(teogw.TeogwData).MarshalJson,
+		new(teogw.TeogwData).UnmarshalJson,
+	)
 	w.Teonet = teo
 
 	// Start and process signal server
-	go teowebrtc_signal.New(params.signalAddr, params.signalAddrTls)
-	time.Sleep(1 * time.Millisecond) // Wait while ws server start
-
-	const name = "server-1"
+	// go teowebrtc_signal.New(params.signalAddr, params.signalAddrTls)
+	// time.Sleep(1 * time.Millisecond) // Wait while ws server start
 
 	// Start and process webrtc server
-	err = teowebrtc_server.Connect(params.signalAddr, name, w.connected)
-	if err != nil {
-		log.Fatalln("connect error:", err)
-	}
+	// err = teowebrtc_server.Connect(params.signalAddr, name, w.connected)
+	// if err != nil {
+	// 	log.Fatalln("connect error:", err)
+	// }
 
 	return
 }
 
-// Connected calls when a peer connected and Data channel created
-func (w *WebRTC) connected(peer string, dc *teowebrtc_client.DataChannel) {
-	log.Println("connected to", peer)
+// // This WebRTC server default commands
+// const (
+// 	cmdSubscribe = "subscribe"
+// 	cmdClients   = "clients"
+// 	cmdList      = "list"
+// )
 
-	dc.OnOpen(func() {
-		log.Println("data channel opened", peer)
-		w.add(peer, dc)
-	})
+// // WebRTC data and methods receiver
+// type WebRTC struct {
+// 	teowebrtc_server.Peers
+// 	*Teonet
+// }
 
-	dc.OnClose(func() {
-		log.Println("data channel closed", peer)
-		w.del(peer, dc)
-	})
+// // Connect and start WebRTC proxy
+// func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 
-	// Register text message handling
-	dc.OnMessage(func(data []byte) {
-		log.Printf("got message from peer '%s': '%s'\n", peer, string(data))
+// 	// Create WebRTC object
+// 	w = new(WebRTC)
+// 	w.Peers.Init()
+// 	w.Subscribe.Init()
+// 	w.Teonet = teo
 
-		// Unmarshal proxy command
-		var request teogw.TeogwData
-		err := json.Unmarshal(data, &request)
-		switch {
-		// Send teonet proxy request
-		case err == nil && len(request.Address) > 0 && len(request.Command) > 0:
-			log.Println("got proxy request:", request)
-			go w.proxyRequest(dc, &request)
+// 	// Start and process signal server
+// 	go teowebrtc_signal.New(params.signalAddr, params.signalAddrTls)
+// 	time.Sleep(1 * time.Millisecond) // Wait while ws server start
 
-		// Execute request to this server
-		case err == nil && len(request.Address) == 0 && len(request.Command) > 0:
-			log.Println("got server request:", request)
-			go w.serverRequest(peer, dc, &request)
+// 	const name = "server-1"
 
-		// Send echo answer
-		default:
-			d := []byte("Answer to: ")
-			data = append(d, data...)
-			dc.Send(data)
-		}
-	})
-}
+// 	// Start and process webrtc server
+// 	err = teowebrtc_server.Connect(params.signalAddr, name, w.connected)
+// 	if err != nil {
+// 		log.Fatalln("connect error:", err)
+// 	}
 
-// Process teonet proxy request: Connect to teonet peer, send request, get
-// answer and resend answer to tru sender
-func (w *WebRTC) proxyRequest(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData) {
+// 	return
+// }
 
-	var err error
+// // Connected calls when a peer connected and Data channel created
+// func (w *WebRTC) connected(peer string, dc *teowebrtc_client.DataChannel) {
+// 	log.Println("connected to", peer)
 
-	// Send answer before return
-	defer w.answer(dc, gw, err)
+// 	dc.OnOpen(func() {
+// 		log.Println("data channel opened", peer)
+// 		w.Add(peer, dc)
+// 	})
 
-	// Send api request to teonet peer
-	data, err := w.proxyCall(gw.Address, gw.Command, gw.Data)
-	if err != nil {
-		return
-	}
+// 	dc.OnClose(func() {
+// 		log.Println("data channel closed", peer)
+// 		w.Del(peer, dc)
+// 	})
 
-	gw.SetData(data)
-}
+// 	// Register text message handling
+// 	dc.OnMessage(func(data []byte) {
+// 		log.Printf("got message from peer '%s': '%s'\n", peer, string(data))
 
-// Process this server request
-func (w *WebRTC) serverRequest(peer string, dc *teowebrtc_client.DataChannel,
-	gw *teogw.TeogwData) {
+// 		// Unmarshal proxy command
+// 		var request teogw.TeogwData
+// 		err := json.Unmarshal(data, &request)
+// 		switch {
+// 		// Send teonet proxy request
+// 		case err == nil && len(request.Address) > 0 && len(request.Command) > 0:
+// 			log.Println("got proxy request:", request)
+// 			go w.proxyRequest(dc, &request)
 
-	var err error
-	var data []byte
+// 		// Execute request to this server
+// 		case err == nil && len(request.Address) == 0 && len(request.Command) > 0:
+// 			log.Println("got server request:", request)
+// 			go w.serverRequest(peer, dc, &request)
 
-	// Send answer before return
-	defer w.answer(dc, gw, err)
+// 		// Send echo answer
+// 		default:
+// 			d := []byte("Answer to: ")
+// 			data = append(d, data...)
+// 			dc.Send(data)
+// 		}
+// 	})
+// }
 
-	// Process request
-	switch gw.Command {
+// // Process teonet proxy request: Connect to teonet peer, send request, get
+// // answer and resend answer to tru sender
+// func (w *WebRTC) proxyRequest(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData) {
 
-	// Get number of clients
-	case cmdClients:
-		l := w.len()
-		data = []byte(fmt.Sprintf("%d", l))
+// 	var err error
 
-	// Get list of clients
-	case cmdList:
-		data, err = w.getList()
+// 	// Send answer before return
+// 	defer w.answer(dc, gw, err)
 
-	// Subscribe to event
-	case cmdSubscribe:
-		w.subscribeRequest(peer, dc, gw)
-		data = []byte("done")
+// 	// Send api request to teonet peer
+// 	data, err := w.proxyCall(gw.Address, gw.Command, gw.Data)
+// 	if err != nil {
+// 		return
+// 	}
 
-	// Wrong request
-	default:
-		err = errors.New("wrong request")
-	}
-	if err == nil {
-		gw.SetData(data)
-	}
-}
+// 	gw.SetData(data)
+// }
 
-// getList return json encoded list of clients
-func (w *WebRTC) getList() ([]byte, error) {
-	type List []string
-	var list List
-	for p := range w.listCh() {
-		list = append(list, p.name)
-	}
-	return json.Marshal(list)
-}
+// // Process this server request
+// func (w *WebRTC) serverRequest(peer string, dc *teowebrtc_client.DataChannel,
+// 	gw *teogw.TeogwData) {
 
-// Process this server subscribe request
-func (w *WebRTC) subscribeRequest(peer string, dc *teowebrtc_client.DataChannel,
-	gw *teogw.TeogwData) {
+// 	var err error
+// 	var data []byte
 
-	request := string(gw.Data)
-	log.Println("got subscribe request:", request)
-	switch request {
-	case cmdClients:
-		w.onchange(peer, dc, func() {
-			l := w.len()
-			data := []byte(fmt.Sprintf("%d", l))
-			gw.Command = request
-			gw.SetData(data)
-			w.answer(dc, gw, nil)
-		})
-	case cmdList:
-		w.onchange(peer, dc, func() {
-			data, err := w.getList()
-			gw.Command = request
-			gw.SetData(data)
-			w.answer(dc, gw, err)
-		})
-	}
-}
+// 	// Send answer before return
+// 	defer w.answer(dc, gw, err)
 
-// Send answer to data channel
-func (w *WebRTC) answer(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData,
-	inerr error) (err error) {
+// 	// Process request
+// 	switch gw.Command {
 
-	if inerr != nil {
-		gw.SetError(inerr)
-	}
-	data, err := json.Marshal(gw)
-	if inerr != nil {
-		// TODO: send this error to dc
-		return
-	}
-	err = dc.Send(data)
-	return
-}
+// 	// Get number of clients
+// 	case cmdClients:
+// 		l := w.Len()
+// 		data = []byte(fmt.Sprintf("%d", l))
 
-// Peers data and methods receiver
-type peers struct {
-	peersMap
-	*sync.RWMutex
-	subscribe
-}
-type peersMap map[string]*teowebrtc_client.DataChannel
-type peerData struct {
-	name string
-	dc   *teowebrtc_client.DataChannel
-}
+// 	// Get list of clients
+// 	case cmdList:
+// 		data, err = w.getList()
 
-// Init peers object
-func (p *peers) init() {
-	p.peersMap = make(peersMap)
-	p.RWMutex = new(sync.RWMutex)
-}
+// 	// Subscribe to event
+// 	case cmdSubscribe:
+// 		w.subscribeRequest(peer, dc, gw)
+// 		data = []byte("done")
 
-// Add peer to peers map
-func (p *peers) add(peer string, dc *teowebrtc_client.DataChannel) {
-	p.Lock()
-	defer func() { p.Unlock(); p.changed() }()
+// 	// Wrong request
+// 	default:
+// 		err = errors.New("wrong request")
+// 	}
+// 	if err == nil {
+// 		gw.SetData(data)
+// 	}
+// }
 
-	// Close data channel to existing connection from this peer
-	if dcCurrent, exists := p.getUnsafe(peer); exists && dcCurrent != dc {
-		log.Println("close existing data channel with peer " + peer)
-		p.delUnsafe(peer, dcCurrent)
-		dcCurrent.Close()
-	}
+// // getList return json encoded list of clients
+// func (w *WebRTC) getList() ([]byte, error) {
+// 	type List []string
+// 	var list List
+// 	for p := range w.ListCh() {
+// 		list = append(list, p.Name)
+// 	}
+// 	return json.Marshal(list)
+// }
 
-	p.peersMap[peer] = dc
-}
+// // Process this server subscribe request
+// func (w *WebRTC) subscribeRequest(peer string, dc *teowebrtc_client.DataChannel,
+// 	gw *teogw.TeogwData) {
 
-// Delete peer from peers map
-func (p *peers) del(peer string, dc *teowebrtc_client.DataChannel) {
-	p.Lock()
-	defer func() { p.Unlock(); p.changed() }()
+// 	request := string(gw.Data)
+// 	log.Println("got subscribe request:", request)
+// 	switch request {
+// 	case cmdClients:
+// 		w.Onchange(peer, dc, func() {
+// 			l := w.Len()
+// 			data := []byte(fmt.Sprintf("%d", l))
+// 			gw.Command = request
+// 			gw.SetData(data)
+// 			w.answer(dc, gw, nil)
+// 		})
+// 	case cmdList:
+// 		w.Onchange(peer, dc, func() {
+// 			data, err := w.getList()
+// 			gw.Command = request
+// 			gw.SetData(data)
+// 			w.answer(dc, gw, err)
+// 		})
+// 	}
+// }
 
-	dcCurrent, exists := p.getUnsafe(peer)
-	if exists && dcCurrent == dc {
-		log.Println("remove peer " + peer)
-		p.delUnsafe(peer, dc)
-	}
-}
-func (p *peers) delUnsafe(peer string, dc *teowebrtc_client.DataChannel) {
-	delete(p.peersMap, peer)
-	go p.subscribe.del(peer, dc)
-}
+// // Send answer to data channel
+// func (w *WebRTC) answer(dc *teowebrtc_client.DataChannel, gw *teogw.TeogwData,
+// 	inerr error) (err error) {
 
-// Get peers dc from map
-func (p *peers) getUnsafe(name string) (dc *teowebrtc_client.DataChannel, exists bool) {
-	dc, exists = p.peersMap[name]
-	return
-}
-
-// Get len of peers map
-func (p *peers) len() int {
-	p.RLock()
-	defer p.RUnlock()
-	return len(p.peersMap)
-}
-
-// Get list channel of peers map
-func (p *peers) listCh() (ch chan peerData) {
-	p.RLock()
-	defer p.RUnlock()
-	ch = make(chan peerData)
-	go func() {
-		for name, dc := range p.peersMap {
-			ch <- peerData{name, dc}
-		}
-		close(ch)
-	}()
-	return
-}
-
-// Get list of peers map
-func (p *peers) list() (l []peerData) {
-	for p := range p.listCh() {
-		l = append(l, p)
-	}
-	return
-}
-
-// Subscribe to change number in peer map
-func (p *peers) onchange(peer string, dc *teowebrtc_client.DataChannel, f func()) {
-	log.Println(peer + " subscribed to clients")
-	p.subscribe.add(peer, dc, f)
-}
-
-// Executes when peers map changed
-func (p *peers) changed() {
-	for _, sd := range p.subscribe.subscribeMap {
-		sd.f()
-	}
-}
-
-// Subscribe data structure and method receiver
-type subscribe struct {
-	subscribeID int
-	subscribeMap
-	*sync.RWMutex
-}
-type subscribeMap map[int]subscribeData
-type subscribeData struct {
-	peer string
-	dc   *teowebrtc_client.DataChannel
-	f    func()
-}
-
-// Init subscribe object
-func (s *subscribe) init() {
-	s.subscribeMap = make(subscribeMap)
-	s.RWMutex = new(sync.RWMutex)
-}
-
-// Add function to subscribe and return subscribe ID
-func (s *subscribe) add(peer string, dc *teowebrtc_client.DataChannel, f func()) int {
-	s.Lock()
-	defer s.Unlock()
-	s.subscribeID++
-	s.subscribeMap[s.subscribeID] = subscribeData{peer, dc, f}
-	return s.subscribeID
-}
-
-// Delete from subscribe by ID or Peer name
-func (s *subscribe) del(id interface{}, dc ...*teowebrtc_client.DataChannel) {
-	s.Lock()
-	defer s.Unlock()
-	switch v := id.(type) {
-	case int:
-		delete(s.subscribeMap, v)
-	case string:
-		for id, md := range s.subscribeMap {
-			if md.peer == v && len(dc) > 0 && md.dc == dc[0] {
-				delete(s.subscribeMap, id)
-			}
-		}
-	}
-}
+// 	if inerr != nil {
+// 		gw.SetError(inerr)
+// 	}
+// 	data, err := json.Marshal(gw)
+// 	if inerr != nil {
+// 		// TODO: send this error to dc
+// 		return
+// 	}
+// 	err = dc.Send(data)
+// 	return
+// }

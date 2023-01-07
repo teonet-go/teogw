@@ -9,8 +9,10 @@ package teogw
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/json"
 
 	"github.com/kirill-scherba/bslice"
+	"github.com/teonet-go/teowebrtc_server"
 )
 
 // Teogw packet data
@@ -28,6 +30,11 @@ func (gw *TeogwData) SetID(id uint32) {
 }
 
 // Set data
+func (gw *TeogwData) SetCommand(command string) {
+	gw.Command = command
+}
+
+// Set data
 func (gw *TeogwData) SetData(data []byte) {
 	gw.Data = data
 }
@@ -37,20 +44,25 @@ func (gw *TeogwData) SetError(err error) {
 	gw.Err = err.Error()
 }
 
+// Get ID
+func (gw TeogwData) GetID() uint32 {
+	return gw.ID
+}
+
 // Get address
-// func (gw *TeogwData) GetAddress() string {
-// 	return gw.Address
-// }
+func (gw TeogwData) GetAddress() string {
+	return gw.Address
+}
 
-// // Get command
-// func (gw *TeogwData) GetCommand() string {
-// 	return gw.Command
-// }
+// Get command
+func (gw TeogwData) GetCommand() string {
+	return gw.Command
+}
 
-// // Get data
-// func (gw *TeogwData) GetData() []byte {
-// 	return gw.Data
-// }
+// Get data
+func (gw TeogwData) GetData() []byte {
+	return gw.Data
+}
 
 // MarshalBinary marshal Teogw binary packet
 func (gw *TeogwData) MarshalBinary() (out []byte, err error) {
@@ -101,4 +113,32 @@ func (gw *TeogwData) UnmarshalBinary(data []byte) (err error) {
 	gw.Err, err = b.ReadString(buf)
 
 	return
+}
+
+// Unmarshal Json and return TeogwData
+func (gw TeogwData) UnmarshalJson(data []byte) (teowebrtc_server.TeogwData, error) {
+	var request = TeogwData{}
+	err := json.Unmarshal(data, &request)
+	return request, err
+}
+
+// Marshal TeogwData to Json
+func (gw TeogwData) MarshalJson(
+	gwData teowebrtc_server.TeogwData,
+	command string, inData []byte, inErr error) ([]byte, error) {
+
+	var request = TeogwData{
+		ID:      gwData.GetID(),
+		Address: gwData.GetAddress(),
+		Command: command,
+		Data:    inData,
+		Err: func() (errStr string) {
+			if inErr != nil {
+				errStr = inErr.Error()
+			}
+			return
+		}(),
+	}
+
+	return json.Marshal(request)
 }
