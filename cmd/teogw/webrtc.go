@@ -32,6 +32,7 @@ func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 		new(teogw.TeogwData).UnmarshalJson,
 	)
 	w.Teonet = teo
+	w.ProxyCall = w.Teonet.proxyCall
 
 	// Start and process signal server
 	// go teowebrtc_signal.New(params.signalAddr, params.signalAddrTls)
