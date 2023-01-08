@@ -139,8 +139,10 @@ github.com/teonet-go/teomon v0.5.14 h1:iYWj2x4oQD7rOp1vu/OMR0dcELEPWhJDcWDx32GvE
 github.com/teonet-go/teomon v0.5.14/go.mod h1:GzmuSJWL+tMiN4HvT1fZoqp/mfN8bX7p5R9bxv8JAhM=
 github.com/teonet-go/teonet v0.6.0 h1:3qiikQ5SZAulXUshI7ags/JLuvbG5aoeiDeU0ofk6oU=
 github.com/teonet-go/teonet v0.6.0/go.mod h1:CabQqE69HzwNi0IAQQXRovH5r3xMAKAkYkUdwzvqgGg=
-github.com/teonet-go/teowebrtc_client v0.0.9 h1:XaJbl7joQ++mWQohWSrOxTJ3t8v+2ZiFLvaCYfqNVSM=
-github.com/teonet-go/teowebrtc_client v0.0.9/go.mod h1:p+1FlNozWgSKtHm12pE1XLBgrqN+YDlDndu29Ka8AsA=
+github.com/teonet-go/teowebrtc_client v0.0.10 h1:OE+FW/qI/gXwORZHIj5z9rXDFHawuxMxYznvam2bv0w=
+github.com/teonet-go/teowebrtc_client v0.0.10/go.mod h1:OYnNIYQGjigII/AllCLNEafjeERK/lMJvkFXggOCHR4=
+github.com/teonet-go/teowebrtc_server v0.0.10 h1:2RD022v1+ikvp85ghpKdM/5/ajt2gRBjMc381sNeu2w=
+github.com/teonet-go/teowebrtc_server v0.0.10/go.mod h1:i8dYXS9H/OCGVQF7HFKI7kssb7hkP8PDO+dxReYYqhM=
 github.com/teonet-go/teowebrtc_signal v0.0.7 h1:Dd83AmPORGoIWenT2u/yAiMDqzcMiBR7eJlC5SJSHdI=
 github.com/teonet-go/teowebrtc_signal v0.0.7/go.mod h1:8Et/ikDhWWoy7jpliZPmDFx7ep12m85YF5/v5NQlICs=
 github.com/teonet-go/teowebrtc_signal_client v0.0.8 h1:RyAh3vUe0f4/zcVeNg9Q0I93zhZxxBVpcLIrls0/5jA=

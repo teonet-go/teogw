@@ -2,15 +2,14 @@ module github.com/teonet-go/teogw
 
 go 1.19
 
-replace github.com/teonet-go/teowebrtc_server => ../teowebrtc_server
-
+// replace github.com/teonet-go/teowebrtc_server => ../teowebrtc_server
 // replace github.com/teonet-go/teowebrtc_client => ../teowebrtc_client
 
 require (
 	github.com/kirill-scherba/bslice v0.0.2
 	github.com/teonet-go/teomon v0.5.14
 	github.com/teonet-go/teonet v0.6.0
-	github.com/teonet-go/teowebrtc_server v0.0.9
+	github.com/teonet-go/teowebrtc_server v0.0.10
 	github.com/teonet-go/tru v0.0.10
 )
 
@@ -39,7 +38,7 @@ require (
 	github.com/pion/turn/v2 v2.0.9 // indirect
 	github.com/pion/udp v0.1.1 // indirect
 	github.com/pion/webrtc/v3 v3.1.50 // indirect
-	github.com/teonet-go/teowebrtc_client v0.0.9 // indirect
+	github.com/teonet-go/teowebrtc_client v0.0.10 // indirect
 	github.com/teonet-go/teowebrtc_signal v0.0.7 // indirect
 	github.com/teonet-go/teowebrtc_signal_client v0.0.8 // indirect
 	golang.org/x/crypto v0.5.0 // indirect
