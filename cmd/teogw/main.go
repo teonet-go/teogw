@@ -79,12 +79,15 @@ func main() {
 	// Connect and start Tru proxy
 	t, err := newTru(teo)
 	if err != nil {
-		log.Fatalln("can't strat tru, error:", err)
+		log.Fatalln("can't start tru, error:", err)
 	}
 	defer t.Close()
 
 	// Connect and start WebRTC proxy
-	newWebRTC(teo)
-
+	_, err = newWebRTC(teo)
+	if err != nil {
+		log.Fatalln("can't start WebRTC, error:", err)
+	}
+	
 	select {}
 }

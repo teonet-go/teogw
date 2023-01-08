@@ -117,7 +117,7 @@ func (gw *TeogwData) UnmarshalBinary(data []byte) (err error) {
 
 // Marshal TeogwData to Json
 func (gw TeogwData) MarshalJson(
-	gwData teowebrtc_server.TeogwData,
+	gwData teowebrtc_server.WebRTCData,
 	command string, inData []byte, inErr error) ([]byte, error) {
 
 	var request = TeogwData{
@@ -137,7 +137,7 @@ func (gw TeogwData) MarshalJson(
 }
 
 // Unmarshal Json and return TeogwData
-func (gw TeogwData) UnmarshalJson(data []byte) (teowebrtc_server.TeogwData, error) {
+func (gw TeogwData) UnmarshalJson(data []byte) (teowebrtc_server.WebRTCData, error) {
 	var request = TeogwData{}
 	err := json.Unmarshal(data, &request)
 	return request, err
