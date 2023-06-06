@@ -24,7 +24,7 @@ const (
 	appShort   = "teogw"
 	appName    = "Teonet gateway application"
 	appLong    = ""
-	appVersion = "0.6.4"
+	appVersion = "0.6.7"
 )
 
 var appStartTime = time.Now()
