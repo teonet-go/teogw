@@ -1,4 +1,4 @@
-// Copyright 2022 Kirill Scherba <kirill@scherba.ru>. All rights reserved.
+// Copyright 2022-2024 Kirill Scherba <kirill@scherba.ru>. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -24,7 +24,7 @@ const (
 	appShort   = "teogw"
 	appName    = "Teonet gateway application"
 	appLong    = ""
-	appVersion = "0.6.7"
+	appVersion = "0.6.8"
 )
 
 var appStartTime = time.Now()
@@ -65,7 +65,6 @@ func main() {
 	flag.IntVar(&params.tru_port, "tp", 7701, "tru local port")
 
 	flag.StringVar(&params.signalAddr, "signal-addr", ":8081", "webrtc http signal service address")
-	flag.StringVar(&params.signalAddrTls, "signal-addr-ssl", ":8082", "webrtc https signal service address")
 
 	flag.Parse()
 

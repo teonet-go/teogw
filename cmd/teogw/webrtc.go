@@ -1,4 +1,4 @@
-// Copyright 2022-2023 Kirill Scherba <kirill@scherba.ru>. All rights reserved.
+// Copyright 2022-2024 Kirill Scherba <kirill@scherba.ru>. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -26,7 +26,7 @@ func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 	w = new(WebRTC)
 	w.WebRTC, err = teowebrtc_server.New(
 		params.signalAddr,
-		params.signalAddrTls,
+		true,
 		name,
 		new(teogw.TeogwData).MarshalJson,
 		new(teogw.TeogwData).UnmarshalJson,
@@ -37,12 +37,12 @@ func newWebRTC(teo *Teonet) (w *WebRTC, err error) {
 	// Add WebRTC commands
 	w.Commands.
 		Add("hello",
-			func(gw teowebrtc_server.WebRTCData) (data []byte, err error) {
+			func(dc teowebrtc_server.DataChannel, gw teowebrtc_server.WebRTCData) (data []byte, err error) {
 				data = []byte("hello")
 				return
 			}).
 		Add("hello-2",
-			func(gw teowebrtc_server.WebRTCData) (data []byte, err error) {
+			func(dc teowebrtc_server.DataChannel, gw teowebrtc_server.WebRTCData) (data []byte, err error) {
 				data = []byte("hello-2")
 				return
 			})
